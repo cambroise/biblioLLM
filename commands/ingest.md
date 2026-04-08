@@ -29,10 +29,11 @@ If the argument is a Papis folder (e.g. `/ingest graphical-metho-evans-2012`):
 
 If the argument is a PDF file or a URL, read/fetch the content.
 
-Produce:
+Produce a note `Bibliography/<dirname>/<dirname>.md`:
 - **Summary** in 3–5 points
 - **Key takeaways**: the 3–5 most important points for the research project
 - **Key equations**: extract and display the central equations with their meaning
+- **obsidian wiki links**: make links with other papis notes if needed using the obsidian syntax [[<dirname>]]
 
 ---
 
