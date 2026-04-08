@@ -8,6 +8,19 @@ This repo contains the **schema layer only** — the skills and commands. Your v
 
 ---
 
+## Origin
+
+This project is directly inspired by [Andrej Karpathy's LLM-wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f), in which he describes using an LLM as a disciplined writer of a personal wiki: the human reads, the LLM writes structured, interlinked notes.
+
+As a long-time Obsidian user, I tested Karpathy's setup and was immediately struck by how effective it felt — the LLM's ability to maintain consistent structure, update cross-links, and surface connections between notes turned a passive reading habit into an active, queryable knowledge base. I decided to push the concept further for academic research by coupling it with:
+
+- **[Papis](https://papis.readthedocs.io/)** — for proper bibliographic management (arXiv, DOI, BibTeX, metadata) instead of ad-hoc file naming
+- **[Quarto](https://quarto.org/)** — for `.qmd` notes with LaTeX math, citations, and reproducible code chunks, enabling the wiki to double as a Quarto book or website
+
+The result is a workflow where every paper you read gets a structured note, every concept gets a dedicated page, and the whole thing stays navigable as an Obsidian graph — all maintained by the LLM with minimal manual effort.
+
+---
+
 ## Prerequisites
 
 ### 1. Papis — bibliography manager
@@ -200,6 +213,67 @@ papis cache reset               # rebuild cache
 - **Log format:** `## [YYYY-MM-DD] <verb> | <title>` — grep-parseable.
 - **Tags in YAML frontmatter:** no `#` prefix (`tags: [claude, reading]` not `tags: [#claude]`).
 - **After any Papis import**, re-export BibTeX: `papis export --all --format bibtex > "$VAULT_DIR/Bibliography/references.bib"`.
+
+---
+
+## Adapting to Gemini CLI
+
+The schema is not tied to Claude Code. If you prefer [Gemini CLI](https://github.com/google-gemini/gemini-cli), the adaptation is straightforward.
+
+### 1. Create a `gemini.md` vault instructions file
+
+Gemini CLI reads a `GEMINI.md` file in the working directory (analogous to Claude Code's `CLAUDE.md`). Copy and rename:
+
+```bash
+cp CLAUDE-biblioLLM.md ~/research/GEMINI.md
+```
+
+The content is identical — it describes vault structure, Papis conventions, and maintenance rules. No changes needed beyond the filename.
+
+### 2. Adapt the skills
+
+Gemini CLI uses a different skill/tool registration mechanism. Skills in this repo are written as plain markdown instruction files. To use them with Gemini:
+
+- **Papis operations**: paste the content of `papis/skill.md` into your `GEMINI.md` as a dedicated section, or reference it as a system prompt file.
+- **Quarto operations**: same approach with `quarto-manager/SKILL.md`.
+
+Example `GEMINI.md` structure:
+
+```markdown
+# GEMINI.md — Research vault
+
+[paste content of CLAUDE-biblioLLM.md here]
+
+---
+
+## Papis skill
+
+[paste content of papis/skill.md here]
+
+---
+
+## Quarto skill
+
+[paste content of quarto-manager/SKILL.md here]
+```
+
+### 3. Adapt the slash commands
+
+Gemini CLI supports slash commands via a `commands/` directory (same convention). The command files in this repo work as-is — they are plain markdown with numbered steps and bash blocks.
+
+Point Gemini CLI to the commands folder in its settings, or invoke commands by pasting the file content into the conversation as a system instruction.
+
+### 4. Key differences to keep in mind
+
+| Aspect | Claude Code | Gemini CLI |
+|--------|-------------|------------|
+| Instructions file | `CLAUDE.md` | `GEMINI.md` |
+| Skills registration | `~/.claude/settings.json` | System prompt or `GEMINI.md` sections |
+| Slash commands | `commands/` directory | `commands/` directory (same) |
+| Tool use | Native (Read, Grep, Bash…) | Native (similar capabilities) |
+| Model | Claude (Anthropic) | Gemini (Google) |
+
+The vault structure, Papis conventions, wikilink syntax, and log format are model-agnostic — they work identically regardless of which LLM you use.
 
 ---
 
