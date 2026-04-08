@@ -23,9 +23,7 @@ To initialize a new vault: run `/init-biblioLLM`.
 │       ├── info.yaml     # Papis metadata (including `ref` field = BibTeX key)
 │       ├── <dirname>.pdf # Article PDF
 │       └── <dirname>.md  # Obsidian reading notes
-├── Notes/                # Thematic notes, concepts, syntheses (.md or .qmd)
-├── Administration/       # Administrative documents (optional)
-└── Code/                 # Python/R scripts (optional)
+└── Notes/                # Thematic notes, concepts, syntheses (.md or .qmd)
 ```
 
 ---
