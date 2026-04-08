@@ -1,96 +1,123 @@
-# CLAUDE.md
+# CLAUDE.md — Research vault
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project context
 
-## What this repo is
+This repository centralizes the work of a researcher (PhD student, postdoc, independent researcher) as a wiki of reading notes, concepts, and bibliographic references maintained by an LLM.
 
-`biblioLLM` is the **schema layer** of an LLM-maintained research wiki. It contains reusable skills and slash-command definitions that tell an LLM agent how to act as a disciplined wiki maintainer over a Papis bibliography + Obsidian vault. It does not contain the wiki or the raw sources themselves — those live in the user's vault.
+**Pattern**: raw sources (PDFs, articles) → the LLM builds and maintains an interlinked markdown wiki → the user reads the wiki in Obsidian while the LLM writes it.
 
-The pattern: raw sources (PDFs, articles) → LLM builds and maintains a persistent wiki of interlinked markdown files → user reads the wiki in Obsidian while the LLM writes it.
+To initialize a new vault: run `/init-biblioLLM`.
 
-## Repository structure
+---
 
-```
-commands/       # Slash-command definitions for wiki operations
-  ingest.md     # /ingest — process a new Papis source into the vault
-  query.md      # /query  — answer questions against the vault
-  lint.md       # /lint   — health-check the vault
-
-papis/
-  skill.md      # Papis CLI reference + workflow (imported as a skill)
-
-quarto-manager/
-  SKILL.md      # Quarto project management skill
-  references/   # Detailed reference docs for each /quarto:* command
-  scripts/      # Python utilities (check_yaml.py, check_bib.py, convert_rmd.py, check_math.py)
-```
-
-## Vault conventions (applies when operating on a user's vault)
-
-The vault operated on by these commands has this layout:
+## Vault structure
 
 ```
-Bibliography/           # Papis library — one subfolder per paper
-  <dirname>/
-    info.yaml           # metadata; `ref` field = BibTeX key
-    <dirname>.pdf
-    <dirname>.md        # reading notes (filed by /ingest)
-Notes/                  # thematic notes, concept pages, syntheses (.md or .qmd)
-index.md                # master index: every wiki page with one-line summary
-log.md                  # append-only log: ## [YYYY-MM-DD] <op> | <title>
+<vault>/
+├── index.md              # Catalog of all pages (keep up to date)
+├── log.md                # Append-only chronological journal of operations
+├── Bibliography/         # Papis bibliography + Obsidian vault
+│   ├── .papis.config     # Papis config (library name, current directory)
+│   ├── references.bib    # BibTeX exported from Papis
+│   └── <dirname>/        # One folder per article (lowercase-hyphenated name)
+│       ├── info.yaml     # Papis metadata (including `ref` field = BibTeX key)
+│       ├── <dirname>.pdf # Article PDF
+│       └── <dirname>.md  # Obsidian reading notes
+└── Notes/                # Thematic notes, concepts, syntheses (.md or .qmd)
 ```
 
-**Papis config:** identify the active library with `papis list --libraries`, then derive `$VAULT_DIR` (parent of `Bibliography/`).
+---
 
-## Core operations
+## Bibliography management (Papis)
 
-### `/init-biblioLLM`
-Bootstrap or resync a vault: detect the active Papis library, scan all existing sources and notes, then create or update `index.md` and `log.md`.
+- **Tool**: [Papis](https://papis.readthedocs.io/) — CLI bibliography manager
+- **Obsidian vault**: `Bibliography/` is also an Obsidian vault — `<dirname>.md` files are reading notes browsable in Obsidian
+- **Folder naming**: `<dirname>` in lowercase with hyphens (e.g. `graphical-metho-evans-2012`)
+- **BibTeX key**: the `ref` field in `info.yaml` may differ from the folder name — this `ref` is what is used in Quarto citations (`@Graphical_metho_Evans_2012`)
+- **BibTeX**: exported to `Bibliography/references.bib`
 
-### `/ingest <dirname-or-pdf-or-url>`
-Five-step workflow: read source → identify affected pages (confirm with user) → write `Bibliography/<dirname>/<dirname>.md` → update concept/author pages in `Notes/` → update `index.md` and `log.md`. A single ingest typically touches 10–15 wiki pages.
+### Library initialization
 
-### `/query <question>`
-Read `index.md` first, then drill into relevant pages. Always offer to persist the answer as a new `Notes/` page tagged `#claude #query`.
-
-### `/lint [links|orphans|stale|gaps|contradictions]`
-Audit the vault, produce a structured report, propose concrete actions, then log the audit run.
-
-## Key conventions
-
-- **BibTeX key (`ref`)** in `info.yaml` may differ from the folder name. Always read `info.yaml` to get the correct key before generating citations.
-- **Wikilinks** use `[[filename]]` syntax (Obsidian-compatible). Every note should link to related notes.
-- **Log format:** entries must start with `## [YYYY-MM-DD] <verb> | <title>` so they are grep-parseable.
-- **index.md** is updated on every ingest and query-to-vault operation. Never let it go stale.
-- **Papis folder naming:** `<word1>-<word2>-<author>-<year>` in lowercase with hyphens.
-- After any Papis import, always re-export BibTeX: `papis export --all --format bibtex > references.bib`
-
-## Papis quick reference
+**Always** identify the active library before any papis command:
 
 ```bash
-papis list --libraries                          # list available libraries
-papis add --from arxiv https://arxiv.org/abs/… # import from arXiv
-papis add paper.pdf --from doi 10.xxxx/…       # import from DOI
-papis add --from bibtex "$(pbpaste)"           # import from clipboard BibTeX
-papis export --all --format bibtex > refs.bib  # export full library
-papis update --set KEY VALUE QUERY             # edit a field
-papis tag --add TAG QUERY                      # add a tag
-papis cache reset                              # rebuild cache
+papis list --libraries              # list available libraries
+export PAPIS_LIB=<library-name>     # select the library
+papis cache reset                   # full rescan of the directory (avoids missing entries)
 ```
 
-## Quarto scripts
+`$VAULT_DIR` = parent directory of the active library's `Bibliography/` folder.
 
-Located in `quarto-manager/scripts/`. Run directly with Python 3:
+### Common commands
 
 ```bash
-python3 quarto-manager/scripts/check_yaml.py <file.qmd>
-python3 quarto-manager/scripts/check_bib.py <refs.bib> --qmd-dir <project>/
-python3 quarto-manager/scripts/check_math.py <file.qmd>
-python3 quarto-manager/scripts/convert_rmd.py <file.Rmd>
+papis list --all                        # list all entries
+papis add <file.pdf>                    # add an article
+papis open <ref>                        # open a PDF
+papis rm --all --force --doc-folder Bibliography/<folder>  # delete an entry
 ```
 
-## Extending this repo
+### BibTeX export — systematic operation
 
-- To add a new slash command: create `commands/<name>.md` following the structure of `ingest.md` (numbered steps, bash blocks for grep/find, explicit "wait for user confirmation" gates before writes).
-- To add a new skill: create `<skill-name>/skill.md` with YAML frontmatter (`name`, `description`, `triggers`) followed by the skill body.
-- Reference docs too long for a skill file go in `<skill-name>/references/<topic>.md` and are referenced from the main `SKILL.md`.
+**After any addition, deletion or modification**, regenerate BibTeX:
+
+```bash
+papis export --all --format bibtex > "$VAULT_DIR/Bibliography/references.bib"
+```
+
+### Detecting and removing duplicates
+
+Signs of a duplicate: two folders for the same article. Procedure:
+
+```bash
+papis cache reset
+papis list --all        # spot duplicates (same author + year)
+# Delete the empty duplicate (without PDF):
+papis rm --all --force --doc-folder Bibliography/<empty-folder>
+papis export --all --format bibtex > "$VAULT_DIR/Bibliography/references.bib"
+```
+
+---
+
+## Quarto files (.qmd)
+
+- **Format**: Quarto with HTML and PDF output
+- **Bibliography**: `bibliography: references.bib` in the YAML header
+- **Math**: standard LaTeX (`amsmath`, `amssymb`)
+- **Diagrams**: Mermaid for timelines and schemas
+- **Code**: R or Python chunks depending on the file
+- Compilation: `quarto render <file.qmd>`
+
+---
+
+## Python (and R) code
+
+- Scripts go in `Code/`
+- Use standard scientific libraries: `numpy`, `scipy`, `sklearn`, `networkx`, `matplotlib`
+- Quarto notebooks with Python/R chunks are accepted in `Notes/`
+
+---
+
+## Vault maintenance — mandatory rule
+
+**Each time a markdown file is added** (reading note, concept page, author page), systematically update:
+
+1. **`index.md`** — add a line in the appropriate section (Sources, Thematic notes, Concepts, People) with the `[[wikilink]]`, date/author if relevant, and a one-line summary. Increment the statistics at the bottom.
+
+2. **`log.md`** — prepend an entry (format `## [YYYY-MM-DD] <type> | <title>`) with the fields: source, author, BibTeX ref if applicable, action taken, affected pages.
+
+Log types: `ingest` (new source), `update` (updated existing note), `create` (new concept/author page), `lint` (vault audit), `setup` (structural change).
+
+---
+
+## Style conventions
+
+- **Language**: English for notes and documents
+- **Citations**: Quarto style `@key` with `.bib` file
+- **Math**: standard LaTeX notation, `align` and `equation` environments
+- **Commits**: descriptive and concise messages
+- **Tags in Obsidian properties**: the `tags` line in YAML frontmatter uses tags **without `#`**:
+  ```yaml
+  tags: [claude, reading, concept, causal-discovery]
+  ```
+  Never write `tags: [#claude, #reading, ...]` — `#` is forbidden in YAML values.
