@@ -44,7 +44,10 @@ To initialize a new vault: run `/init-biblioLLM`.
 papis list --libraries              # list available libraries
 export PAPIS_LIB=<library-name>     # select the library
 papis cache reset                   # full rescan of the directory (avoids missing entries)
+papis -l $PAPIS_LIB <CMD>           #
 ```
+
+
 
 `$VAULT_DIR` = parent directory of the active library's `Bibliography/` folder.
 
